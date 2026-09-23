@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Entregas — OBDC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0f1923;--ink-soft:#4a5568;--muted:#888780;
+  --surface:#f7f6f2;--white:#ffffff;--border:#e4e2dc;--border-strong:#c8c6be;
+  --teal:#007e6a;--teal-light:#e0f5f0;--teal-mid:#5cb8a8;
+  --gold:#d4531e;--gold-light:#fdf0eb;
+  --ok:#15803d;--ok-bg:#f0fdf4;--ok-border:#86efac;
+  --warn:#a05c00;--warn-bg:#fdf3e4;
+  --danger:#b91c1c;--danger-bg:#fef2f2;
+  --blue:#1a56a0;--blue-bg:#e8f0fb;
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:'Space Grotesk',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;padding-bottom:3rem}
+
+/* ── HEADER ── */
+.top-bar{background:var(--ink);color:#fff;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:54px}
+.logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--gold)}
+.conn-badge{font-size:11px;font-weight:500;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:#1e2d38}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:#888}
+.conn-dot.on{background:#4ade80}
+
+/* ── PAGE ── */
+.page{max-width:900px;margin:0 auto;padding:1.5rem 1rem}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
+.page-title{font-size:20px;font-weight:600;color:var(--ink)}
+.toolbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.date-input{font-family:'Space Grotesk',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--white);color:var(--ink);cursor:pointer}
+.btn{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--white);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
+.btn:hover{background:var(--surface);border-color:var(--ink)}
+.btn-teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-teal:hover{background:#006657;border-color:#006657}
+.btn-sm{font-size:11px;padding:4px 9px;gap:3px}
+
+/* ── SUMMARY BAR ── */
+.summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:1.5rem}
+.sum-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
+.sum-label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.sum-val{font-size:24px;font-weight:600;font-family:'IBM Plex Mono',monospace}
+.sum-val.teal{color:var(--teal)}
+.sum-val.ok{color:var(--ok)}
+.sum-val.warn{color:var(--warn)}
+.sum-val.danger{color:var(--danger)}
+
+/* ── PERSON CARD ── */
+.person-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:1rem;overflow:hidden}
+.person-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;flex-wrap:wrap;gap:8px}
+.person-left{display:flex;align-items:center;gap:10px}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;cursor:pointer;position:relative}
+.av-a{background:var(--blue-bg);color:var(--blue)}
+.av-b{background:var(--teal-light);color:var(--teal)}
+.av-c{background:#eeedfe;color:#3c3489}
+.person-name-wrap{}
+.person-name{font-size:15px;font-weight:600}
+.person-meta{font-size:12px;color:var(--muted);margin-top:1px}
+.meta-ok{color:var(--ok)}
+.meta-warn{color:var(--warn)}
+.meta-danger{color:var(--danger)}
+.person-pct-badge{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+
+/* ── PROGRESS BAR ── */
+.prog-wrap{padding:0 16px 10px}
+.prog-track{height:7px;background:var(--surface);border-radius:99px;overflow:hidden;border:1px solid var(--border)}
+.prog-bar{height:100%;border-radius:99px;transition:width .5s ease}
+.prog-labels{display:flex;justify-content:space-between;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-top:4px}
+
+/* ── TASKS ── */
+.tasks-section{border-top:1px solid var(--border);padding:12px 16px 14px}
+.col-row{display:grid;grid-template-columns:1fr 100px 100px 28px;gap:8px;align-items:center;margin-bottom:5px}
+.col-head{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;text-align:center}
+.task-row{display:grid;grid-template-columns:1fr 100px 100px 28px;gap:8px;align-items:center;padding:4px 0}
+.task-row+.task-row{border-top:1px solid var(--border)}
+.task-name-input{font-family:'Space Grotesk',sans-serif;font-size:13px;background:none;border:none;outline:none;color:var(--ink);width:100%;padding:3px 0;border-bottom:1px solid transparent}
+.task-name-input:focus{border-bottom:1px solid var(--teal-mid)}
+.task-name-input::placeholder{color:var(--muted)}
+.num-input{font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:center;padding:5px 4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--ink);width:100%;transition:border-color .15s}
+.num-input:focus{outline:none;border-color:var(--teal-mid)}
+.num-input.real{background:var(--ok-bg);border-color:var(--ok-border);color:var(--ok)}
+.mini-bar-wrap{height:3px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:3px}
+.mini-bar{height:100%;border-radius:99px;transition:width .4s}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--muted);width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s}
+.del-btn:hover{color:var(--danger);background:var(--danger-bg)}
+.tasks-footer{display:flex;justify-content:flex-end;margin-top:8px}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(15,25,35,.45);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;width:min(420px,95vw);box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:1rem}
+.form-row{margin-bottom:.85rem}
+.form-label{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px;display:block}
+.form-input{font-family:'Space Grotesk',sans-serif;font-size:14px;width:100%;padding:9px 12px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);color:var(--ink)}
+.form-input:focus{outline:none;border-color:var(--teal)}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:1.25rem}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:14px}
+.empty i{font-size:32px;display:block;margin-bottom:8px;opacity:.4}
+
+/* ── CONNECTING ── */
+.connecting{text-align:center;padding:4rem 1rem;color:var(--muted)}
+.connecting i{font-size:36px;display:block;margin-bottom:12px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:13px;padding:10px 18px;border-radius:20px;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Gestão de Entregas · OBDC
+  </div>
+  <div class="conn-badge">
+    <div class="conn-dot" id="connDot"></div>
+    <span id="connLabel">Conectando...</span>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="toolbar">
+    <div class="page-title">Acompanhamento diário</div>
+    <div class="toolbar-right">
+      <input type="date" class="date-input" id="dateInput">
+      <button class="btn" onclick="openNewDay()"><i class="ti ti-calendar-plus"></i> Nova data</button>
+      <button class="btn btn-teal" onclick="openAddPerson()"><i class="ti ti-user-plus"></i> Pessoa</button>
+    </div>
+  </div>
+
+  <div class="summary" id="summaryBar"></div>
+  <div id="mainContent"><div class="connecting"><i class="ti ti-loader"></i>Conectando ao banco de dados...</div></div>
+
+</div>
+
+<!-- MODAL NOVA PESSOA -->
+<div class="overlay" id="modalPerson">
+  <div class="modal">
+    <div class="modal-title" id="modalPersonTitle">Adicionar pessoa</div>
+    <div class="form-row">
+      <label class="form-label">Nome</label>
+      <input class="form-input" id="mpName" placeholder="Ex: Guilherme Ribeiro">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Iniciais (aparecem no avatar)</label>
+      <input class="form-input" id="mpInitials" maxlength="3" placeholder="Ex: GR" style="text-transform:uppercase">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Cor do avatar</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <div class="avatar av-a" style="cursor:pointer;width:32px;height:32px" onclick="selColor('av-a',this)">A</div>
+        <div class="avatar av-b" style="cursor:pointer;width:32px;height:32px" onclick="selColor('av-b',this)">B</div>
+        <div class="avatar av-c" style="cursor:pointer;width:32px;height:32px" onclick="selColor('av-c',this)">C</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalPerson')">Cancelar</button>
+      <button class="btn btn-teal" onclick="savePerson()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVA DATA -->
+<div class="overlay" id="modalDate">
+  <div class="modal">
+    <div class="modal-title">Nova data de acompanhamento</div>
+    <div class="form-row">
+      <label class="form-label">Data</label>
+      <input type="date" class="form-input" id="mdDate">
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:4px">Cria um registro zerado para todas as pessoas nesta data.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalDate')">Cancelar</button>
+      <button class="btn btn-teal" onclick="saveNewDay()">Criar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- FIREBASE SDK 8.x COMPAT -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────
+const FB_CONFIG = {
+  apiKey: "AIzaSyA5awAtgoW1_IYdB49Y2JaXtitK6oVrs5Q",
+  authDomain: "gestao-lari.firebaseapp.com",
+  databaseURL: "https://gestao-lari-default-rtdb.firebaseio.com",
+  projectId: "gestao-lari",
+  storageBucket: "gestao-lari.firebasestorage.app",
+  messagingSenderId: "905341992680",
+  appId: "1:905341992680:web:38066c7f4a48febe2c135d"
+};
+
+// ── INIT ──────────────────────────────────────────────────
+firebase.initializeApp(FB_CONFIG);
+const db = firebase.database();
+
+// Nós raiz
+const refPeople  = db.ref('pessoas');
+const refRecords = db.ref('registros');
+
+// ── STATE ─────────────────────────────────────────────────
+let people  = {};   // { id: { name, initials, color } }
+let records = {};   // { date: { personId: { tasks:[{name,prog,real}] } } }
+let today   = new Date().toISOString().slice(0,10);
+let selDate = today;
+let selColor_ = 'av-a';
+let connOk  = false;
+
+// ── CONNECTION STATUS ─────────────────────────────────────
+db.ref('.info/connected').on('value', snap => {
+  connOk = !!snap.val();
+  document.getElementById('connDot').className  = 'conn-dot' + (connOk ? ' on' : '');
+  document.getElementById('connLabel').textContent = connOk ? 'Sincronizado' : 'Reconectando...';
+});
+
+// ── DATE INPUT ────────────────────────────────────────────
+const dateInput = document.getElementById('dateInput');
+dateInput.value = selDate;
+dateInput.addEventListener('change', () => { selDate = dateInput.value; render(); });
+
+// ── REALTIME LISTENERS ────────────────────────────────────
+refPeople.on('value', snap => {
+  people = snap.val() || {};
+  render();
+});
+refRecords.on('value', snap => {
+  records = snap.val() || {};
+  render();
+});
+
+// ── HELPERS ───────────────────────────────────────────────
+function pct(r, p) { return p > 0 ? Math.round(r / p * 100) : 0; }
+function barColor(p) {
+  return p >= 100 ? '#15803d' : p >= 60 ? '#007e6a' : p > 0 ? '#a05c00' : '#d1d0ca';
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── RENDER ────────────────────────────────────────────────
+function render() {
+  renderSummary();
+  renderPeople();
+}
+
+function renderSummary() {
+  const dayData = (records[selDate] || {});
+  let totP = 0, totR = 0;
+  Object.keys(people).forEach(pid => {
+    const pr = (dayData[pid] && dayData[pid].tasks) || [];
+    pr.forEach(t => { totP += Number(t.prog || 0); totR += Number(t.real || 0); });
+  });
+  const g = pct(totR, totP);
+  let gColor = 'teal';
+  if (totP === 0) gColor = 'teal';
+  else if (g >= 100) gColor = 'ok';
+  else if (g >= 60) gColor = 'warn';
+  else gColor = 'danger';
+
+  document.getElementById('summaryBar').innerHTML = `
+    <div class="sum-card">
+      <div class="sum-label">Data</div>
+      <div class="sum-val teal" style="font-size:18px">${fmtDate(selDate)}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Programado</div>
+      <div class="sum-val teal">${totP}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Realizado</div>
+      <div class="sum-val ok">${totR}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Aproveitamento</div>
+      <div class="sum-val ${gColor}">${totP > 0 ? g + '%' : '—'}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Pessoas</div>
+      <div class="sum-val teal">${Object.keys(people).length}</div>
+    </div>
+  `;
+}
+
+function renderPeople() {
+  const mc = document.getElementById('mainContent');
+  const ids = Object.keys(people);
+  if (!ids.length) {
+    mc.innerHTML = `<div class="empty"><i class="ti ti-users"></i>Nenhuma pessoa cadastrada. Clique em "+ Pessoa" para começar.</div>`;
+    return;
+  }
+  const dayData = records[selDate] || {};
+  mc.innerHTML = ids.map(pid => {
+    const p = people[pid];
+    const tasks = (dayData[pid] && dayData[pid].tasks) ? [...dayData[pid].tasks] : [];
+    const totP = tasks.reduce((s, t) => s + Number(t.prog || 0), 0);
+    const totR = tasks.reduce((s, t) => s + Number(t.real || 0), 0);
+    const g = pct(totR, totP);
+    const metaClass = totP === 0 ? '' : g >= 100 ? 'meta-ok' : g >= 60 ? 'meta-warn' : 'meta-danger';
+    const pctBadgeStyle = totP === 0 ? `background:var(--surface);color:var(--muted)` :
+      g >= 100 ? `background:var(--ok-bg);color:var(--ok)` :
+      g >= 60  ? `background:var(--warn-bg);color:var(--warn)` :
+      `background:var(--danger-bg);color:var(--danger)`;
+
+    const taskRows = tasks.map((t, ti) => {
+      const tp = Number(t.prog || 0), tr = Number(t.real || 0);
+      const tg = pct(tr, tp);
+      return `
+        <div class="task-row">
+          <div>
+            <input class="task-name-input" type="text" value="${esc(t.name || '')}" placeholder="Nome da categoria..." onblur="setTaskName('${pid}',${ti},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+            <div class="mini-bar-wrap"><div class="mini-bar" style="width:${Math.min(tg,100)}%;background:${barColor(tg)}"></div></div>
+          </div>
+          <input class="num-input" type="number" min="0" value="${t.prog || ''}" placeholder="0" onblur="setNum('${pid}',${ti},'prog',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+          <input class="num-input real" type="number" min="0" value="${t.real || ''}" placeholder="0" onblur="setNum('${pid}',${ti},'real',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+          <button class="del-btn" onclick="delTask('${pid}',${ti})" title="Remover"><i class="ti ti-x"></i></button>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="person-card">
+        <div class="person-head">
+          <div class="person-left">
+            <div class="avatar ${p.color || 'av-a'}">${esc(p.initials || '?')}</div>
+            <div class="person-name-wrap">
+              <div class="person-name">${esc(p.name || 'Sem nome')}</div>
+              <div class="person-meta ${metaClass}">${totP > 0 ? `${totR} de ${totP} entregues` : 'sem programação hoje'}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="person-pct-badge" style="${pctBadgeStyle}">${totP > 0 ? g + '%' : '—'}</span>
+            <button class="btn btn-sm" onclick="openEditPerson('${pid}')" title="Editar"><i class="ti ti-pencil"></i></button>
+            <button class="btn btn-sm" onclick="confirmDelPerson('${pid}')" title="Remover pessoa" style="color:var(--danger)"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+        <div class="prog-wrap">
+          <div class="prog-track"><div class="prog-bar" style="width:${Math.min(g,100)}%;background:${barColor(g)}"></div></div>
+          <div class="prog-labels"><span>0%</span><span>${g}%</span><span>100%</span></div>
+        </div>
+        <div class="tasks-section">
+          <div class="col-row">
+            <div></div>
+            <div class="col-head">Programado</div>
+            <div class="col-head">Realizado</div>
+            <div></div>
+          </div>
+          ${taskRows || `<div style="font-size:12px;color:var(--muted);padding:6px 0">Nenhuma categoria. Adicione abaixo.</div>`}
+          <div class="tasks-footer">
+            <button class="btn btn-sm" onclick="addTask('${pid}')"><i class="ti ti-plus"></i> Categoria</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── TASKS ─────────────────────────────────────────────────
+function getPersonTasks(pid) {
+  return ((records[selDate] || {})[pid] && records[selDate][pid].tasks)
+    ? [...records[selDate][pid].tasks] : [];
+}
+
+function saveTasks(pid, tasks) {
+  refRecords.child(selDate).child(pid).set({ tasks });
+}
+
+window.addTask = function(pid) {
+  const tasks = getPersonTasks(pid);
+  tasks.push({ name: '', prog: 0, real: 0 });
+  saveTasks(pid, tasks);
+};
+
+window.setTaskName = function(pid, ti, val) {
+  const tasks = getPersonTasks(pid);
+  if (!tasks[ti]) return;
+  if (tasks[ti].name === val) return;
+  tasks[ti].name = val;
+  saveTasks(pid, tasks);
+};
+
+window.setNum = function(pid, ti, field, val) {
+  const tasks = getPersonTasks(pid);
+  if (!tasks[ti]) return;
+  const num = Math.max(0, Number(val) || 0);
+  if (tasks[ti][field] === num) return;
+  tasks[ti][field] = num;
+  saveTasks(pid, tasks);
+};
+
+window.delTask = function(pid, ti) {
+  const tasks = getPersonTasks(pid);
+  tasks.splice(ti, 1);
+  saveTasks(pid, tasks);
+};
+
+// ── PEOPLE ────────────────────────────────────────────────
+let editingPid = null;
+
+window.openAddPerson = function() {
+  editingPid = null;
+  document.getElementById('modalPersonTitle').textContent = 'Adicionar pessoa';
+  document.getElementById('mpName').value = '';
+  document.getElementById('mpInitials').value = '';
+  selColor_ = 'av-a';
+  document.getElementById('modalPerson').classList.add('open');
+};
+
+window.openEditPerson = function(pid) {
+  editingPid = pid;
+  const p = people[pid] || {};
+  document.getElementById('modalPersonTitle').textContent = 'Editar pessoa';
+  document.getElementById('mpName').value = p.name || '';
+  document.getElementById('mpInitials').value = p.initials || '';
+  selColor_ = p.color || 'av-a';
+  document.getElementById('modalPerson').classList.add('open');
+};
+
+window.savePerson = function() {
+  const name = document.getElementById('mpName').value.trim();
+  const initials = document.getElementById('mpInitials').value.trim().toUpperCase();
+  if (!name) { showToast('Informe o nome'); return; }
+  const data = { name, initials: initials || name.slice(0,2).toUpperCase(), color: selColor_ };
+  const pid = editingPid || refPeople.push().key;
+  refPeople.child(pid).set(data);
+  closeModal('modalPerson');
+  showToast(editingPid ? 'Pessoa atualizada!' : 'Pessoa adicionada!');
+};
+
+window.confirmDelPerson = function(pid) {
+  const p = people[pid] || {};
+  if (!confirm(`Remover "${p.name}"? Os registros de entregas desta pessoa serão mantidos.`)) return;
+  refPeople.child(pid).remove();
+  showToast('Pessoa removida.');
+};
+
+window.selColor = function(color, el) { selColor_ = color; };
+
+// ── DATE ──────────────────────────────────────────────────
+window.openNewDay = function() {
+  document.getElementById('mdDate').value = today;
+  document.getElementById('modalDate').classList.add('open');
+};
+
+window.saveNewDay = function() {
+  const d = document.getElementById('mdDate').value;
+  if (!d) { showToast('Selecione uma data'); return; }
+  selDate = d;
+  dateInput.value = d;
+  closeModal('modalDate');
+  showToast(`Data ${fmtDate(d)} selecionada. Adicione as categorias de cada pessoa.`);
+  render();
+};
+
+window.closeModal = function(id) {
+  document.getElementById(id).classList.remove('open');
+};
+
+// Fechar modal clicando fora
+document.querySelectorAll('.overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
