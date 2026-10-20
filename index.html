@@ -266,6 +266,9 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
         <option value="atencao">Atenção</option>
         <option value="outro">Outro</option>
       </select>
+      <select class="filtro-select" id="filtroDiaryMes">
+        <option value="">Todos os meses</option>
+      </select>
     </div>
     <div id="diaryLista"><div class="loading"><div class="spinner"></div><br>Carregando...</div></div>
   </div>
@@ -700,14 +703,35 @@ async function loadDiary(){
 }
 
 document.getElementById("filtroDiaryTag").addEventListener("change", renderDiary);
+document.getElementById("filtroDiaryMes").addEventListener("change", renderDiary);
+
+function updateFiltroDiaryMes(){
+  const sel = document.getElementById("filtroDiaryMes");
+  const atual = sel.value;
+  const meses = [...new Set(
+    Object.values(diaryEntries)
+      .map(e => (e.dataOcorrido || e.criadoEm?.split("T")[0] || "").slice(0,7))
+      .filter(Boolean)
+  )].sort().reverse();
+  const nomeMes = v => {
+    const [ano, m] = v.split("-");
+    const nomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    return `${nomes[parseInt(m,10)-1]}/${ano}`;
+  };
+  sel.innerHTML = `<option value="">Todos os meses</option>` +
+    meses.map(m => `<option value="${m}"${atual===m?" selected":""}>${nomeMes(m)}</option>`).join("");
+}
 
 function renderDiary(){
+  updateFiltroDiaryMes();
   const cont = document.getElementById("diaryLista");
   const fTag = document.getElementById("filtroDiaryTag").value;
+  const fMes = document.getElementById("filtroDiaryMes").value;
 
   let items = Object.entries(diaryEntries).map(([id,v])=>({id,...v}));
   if(activeColab) items = items.filter(i => i.colaboradora === activeColab);
   if(fTag) items = items.filter(i => i.tag === fTag);
+  if(fMes) items = items.filter(i => (i.dataOcorrido || i.criadoEm?.split("T")[0] || "").startsWith(fMes));
   items.sort((a,b) => (b.criadoEm||"").localeCompare(a.criadoEm||""));
 
   if(items.length === 0){
