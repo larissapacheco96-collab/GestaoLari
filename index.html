@@ -280,6 +280,9 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
       <button class="btn btn-primary" id="btnNovoRisco">+ Novo risco</button>
     </div>
     <div class="filtros">
+      <select class="filtro-select" id="filtroRiscoCliente">
+        <option value="">Todos os clientes</option>
+      </select>
       <select class="filtro-select" id="filtroRiscoNivel">
         <option value="">Todos os níveis</option>
         <option value="alto">Alto</option>
@@ -376,7 +379,10 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
 <div class="modal-overlay" id="modalRisco">
   <div class="modal">
     <h3 id="modalRiscoTitle">Novo risco</h3>
-    <div class="field"><label>Título / Cliente *</label><input type="text" id="r_titulo" placeholder="Ex: Risco de multa — Cliente XYZ — SPED divergente"></div>
+    <div class="row2">
+      <div class="field"><label>Título / Descrição curta *</label><input type="text" id="r_titulo" placeholder="Ex: SPED divergente, multa potencial"></div>
+      <div class="field"><label>Cliente / Empresa</label><input type="text" id="r_cliente" placeholder="Ex: Climppium, Interno"></div>
+    </div>
     <div class="row2">
       <div class="field"><label>Tipo</label>
         <select id="r_tipo">
@@ -795,17 +801,31 @@ async function loadRiscos(){
   });
 }
 
+document.getElementById("filtroRiscoCliente").addEventListener("change", renderRiscos);
 document.getElementById("filtroRiscoNivel").addEventListener("change", renderRiscos);
 document.getElementById("filtroRiscoTipo").addEventListener("change", renderRiscos);
 document.getElementById("filtroRiscoStatus").addEventListener("change", renderRiscos);
 
+function updateFiltroClientes(){
+  const sel = document.getElementById("filtroRiscoCliente");
+  const atual = sel.value;
+  const clientes = [...new Set(
+    Object.values(riscos).map(r => (r.cliente||"").trim()).filter(Boolean)
+  )].sort((a,b) => a.localeCompare(b,"pt-BR"));
+  sel.innerHTML = `<option value="">Todos os clientes</option>` +
+    clientes.map(c => `<option value="${esc(c)}"${atual===c?" selected":""}>${esc(c)}</option>`).join("");
+}
+
 function renderRiscos(){
+  updateFiltroClientes();
   const cont = document.getElementById("riscosLista");
+  const fCliente = document.getElementById("filtroRiscoCliente").value;
   const fNivel = document.getElementById("filtroRiscoNivel").value;
   const fTipo = document.getElementById("filtroRiscoTipo").value;
   const fStatus = document.getElementById("filtroRiscoStatus").value;
 
   let items = Object.entries(riscos).map(([id,v])=>({id,...v}));
+  if(fCliente) items = items.filter(i => (i.cliente||"").trim() === fCliente);
   if(fNivel) items = items.filter(i => i.nivel === fNivel);
   if(fTipo) items = items.filter(i => i.tipo === fTipo);
   if(fStatus) items = items.filter(i => i.statusRisco === fStatus);
@@ -830,6 +850,7 @@ function renderRiscos(){
       <div class="risk-head">
         <div>
           <div class="risk-title">${esc(item.titulo)}</div>
+          ${item.cliente ? `<div style="font-size:12px;font-weight:600;color:var(--teal-dark);margin-bottom:2px;">🏢 ${esc(item.cliente)}</div>` : ""}
           <div class="risk-meta">${fmtDate(item.dataIdentificacao||item.criadoEm?.split("T")[0])} · <span class="risk-tipo">${esc(tipoLabel[item.tipo]||item.tipo||"")}</span></div>
         </div>
         <span class="risk-nivel ${item.nivel||"medio"}">${esc(nivelLabel[item.nivel]||item.nivel)}</span>
@@ -863,6 +884,7 @@ window._editRisco = function(id){
   editRiscoId = id;
   document.getElementById("modalRiscoTitle").textContent = "Editar risco";
   document.getElementById("r_titulo").value = item.titulo || "";
+  document.getElementById("r_cliente").value = item.cliente || "";
   document.getElementById("r_tipo").value = item.tipo || "cliente";
   document.getElementById("r_nivel").value = item.nivel || "medio";
   document.getElementById("r_desc").value = item.descricao || "";
@@ -881,7 +903,7 @@ window._delRisco = function(id){
 document.getElementById("btnNovoRisco").addEventListener("click", () => {
   editRiscoId = null;
   document.getElementById("modalRiscoTitle").textContent = "Novo risco";
-  ["r_titulo","r_desc","r_tratativa"].forEach(id => document.getElementById(id).value = "");
+  ["r_titulo","r_cliente","r_desc","r_tratativa"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("r_tipo").value = "cliente";
   document.getElementById("r_nivel").value = "alto";
   document.getElementById("r_data").value = hoje();
@@ -898,6 +920,7 @@ document.getElementById("btnRiscoSave").addEventListener("click", () => {
   if(!desc){ alert("Informe a descrição do risco."); return; }
   const payload = {
     titulo,
+    cliente: document.getElementById("r_cliente").value.trim(),
     tipo: document.getElementById("r_tipo").value,
     nivel: document.getElementById("r_nivel").value,
     descricao: desc,
