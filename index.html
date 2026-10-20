@@ -249,7 +249,10 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
         <h2>Diário do Time</h2>
         <div class="sec-desc">Registros de situações rotineiras por colaboradora — para feedbacks e acompanhamento.</div>
       </div>
-      <button class="btn btn-primary" id="btnNovaDiary">+ Nova anotação</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" id="btnGerenciarTime">👥 Gerenciar time</button>
+        <button class="btn btn-primary" id="btnNovaDiary">+ Nova anotação</button>
+      </div>
     </div>
     <div class="colab-tabs" id="colabTabs">
       <button class="colab-tab active" data-colab="">Todas</button>
@@ -413,6 +416,22 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
 
 <div id="toast"></div>
 
+<!-- MODAL GERENCIAR TIME -->
+<div class="modal-overlay" id="modalGerenciarTime">
+  <div class="modal" style="max-width:420px;">
+    <h3 style="margin-bottom:16px;">👥 Gerenciar time</h3>
+    <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px;">Adicione ou remova colaboradoras do time. As alterações refletem em todo o sistema.</p>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <input type="text" id="novaColabInput" placeholder="Nome da colaboradora" style="flex:1;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;outline:none;">
+      <button class="btn btn-primary" id="btnSalvarColab">Adicionar</button>
+    </div>
+    <div id="listaTimeGerenciar" style="max-height:280px;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-secondary" id="closeGerenciarTime">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 // ================================================================
 // CONFIGURAÇÃO
@@ -431,11 +450,8 @@ const FIREBASE_CONFIG = {
   appId: "1:1026817748986:web:4d4b1c06d66b9db0fa2cca"
 };
 
-// Colaboradoras do time (fácil de adicionar mais)
-const COLABORADORAS = [
-  "Aline","Bruna","Camila","Débora","Gabriela","Isabela",
-  "Joyce","Juliana","Maria","Nathalia","Priscila","Tamires","Vitória"
-];
+// Colaboradoras — gerenciadas via Firebase
+let COLABORADORAS = [];
 
 // ================================================================
 // AUTENTICAÇÃO
@@ -653,12 +669,6 @@ document.getElementById("btnAlinhSave").addEventListener("click", () => {
 let diaryEntries = {};
 let editDiaryId = null;
 let activeColab = "";
-
-// Preenche select de colaboradoras
-function buildColabSelect(){
-  const sel = document.getElementById("d_colab");
-  sel.innerHTML = `<option value="">Selecione...</option>` + COLABORADORAS.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
-}
 
 function buildColabTabs(entries){
   const nomes = [...new Set(Object.values(entries).map(e=>e.colaboradora).filter(Boolean))].sort();
@@ -917,11 +927,76 @@ document.getElementById("btnRiscoSave").addEventListener("click", () => {
 });
 
 // ================================================================
+// GERENCIAR TIME (colaboradoras dinâmicas via Firebase)
+// ================================================================
+function loadColaboradoras(){
+  db.ref("gestaovista/colaboradoras").on("value", snap => {
+    const data = snap.val() || {};
+    COLABORADORAS = Object.entries(data)
+      .map(([id, v]) => ({ id, nome: v.nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    buildColabSelect();
+    renderGerenciarTime();
+  });
+}
+
+function buildColabSelect(){
+  const sel = document.getElementById("d_colab");
+  sel.innerHTML = `<option value="">Selecione...</option>` +
+    COLABORADORAS.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join("");
+}
+
+function renderGerenciarTime(){
+  const cont = document.getElementById("listaTimeGerenciar");
+  if(!cont) return;
+  if(COLABORADORAS.length === 0){
+    cont.innerHTML = `<p style="color:var(--gray-400);font-size:13px;">Nenhuma colaboradora cadastrada ainda.</p>`;
+    return;
+  }
+  cont.innerHTML = COLABORADORAS.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--gray-50);border-radius:6px;margin-bottom:5px;">
+      <span style="font-size:14px;">${esc(c.nome)}</span>
+      <button onclick="excluirColab('${c.id}')" style="background:none;border:none;cursor:pointer;color:#e74c3c;font-size:16px;padding:2px 6px;" title="Remover">✕</button>
+    </div>
+  `).join("");
+}
+
+window.excluirColab = function(id){
+  if(!confirm("Remover esta colaboradora do time?")) return;
+  db.ref("gestaovista/colaboradoras/" + id).remove();
+};
+
+document.getElementById("btnSalvarColab")?.addEventListener("click", () => {
+  const input = document.getElementById("novaColabInput");
+  const nome = input?.value.trim();
+  if(!nome){ alert("Digite o nome da colaboradora."); return; }
+  const existe = COLABORADORAS.some(c => c.nome.toLowerCase() === nome.toLowerCase());
+  if(existe){ alert("Já existe uma colaboradora com este nome."); return; }
+  db.ref("gestaovista/colaboradoras").push({ nome });
+  input.value = "";
+});
+
+document.getElementById("btnGerenciarTime")?.addEventListener("click", () => {
+  document.getElementById("modalGerenciarTime").style.display = "flex";
+  renderGerenciarTime();
+});
+
+document.getElementById("closeGerenciarTime")?.addEventListener("click", () => {
+  document.getElementById("modalGerenciarTime").style.display = "none";
+});
+
+document.getElementById("modalGerenciarTime")?.addEventListener("click", e => {
+  if(e.target === document.getElementById("modalGerenciarTime")){
+    document.getElementById("modalGerenciarTime").style.display = "none";
+  }
+});
+
+// ================================================================
 // INIT
 // ================================================================
 async function init(){
-  buildColabSelect();
   await initFirebase();
+  loadColaboradoras();
   await Promise.all([loadAlinhamentos(), loadDiary(), loadRiscos()]);
 }
 
