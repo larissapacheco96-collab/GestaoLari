@@ -416,6 +416,12 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
         </select>
       </div>
     </div>
+    <div class="field">
+      <label>Anexos / Prints (máx. 3 imagens, até 500kb cada)</label>
+      <input type="file" id="r_anexos" accept="image/*" multiple style="display:none;">
+      <div id="r_anexos_preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+      <button type="button" id="btnAnexoAdd" class="btn btn-secondary" style="margin-top:8px;font-size:13px;">📎 Adicionar imagem</button>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="btnRiscoCancel">Cancelar</button>
       <button class="btn btn-primary" id="btnRiscoSave">Salvar</button>
@@ -881,6 +887,7 @@ function renderRiscos(){
       </div>
       <div class="risk-desc">${esc(item.descricao||"").replace(/\n/g,"<br>")}</div>
       ${item.tratativa ? `<div style="font-size:12.5px;color:var(--gray-600);background:var(--gray-50);border-radius:7px;padding:10px 12px;margin-bottom:12px;border-left:3px solid var(--gray-200);"><strong>Tratativa:</strong> ${esc(item.tratativa).replace(/\n/g,"<br>")}</div>` : ""}
+      ${item.anexos && item.anexos.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${item.anexos.map((a,i) => `<img src="${a.base64}" alt="${esc(a.nome)}" title="${esc(a.nome)}" style="height:64px;width:64px;object-fit:cover;border-radius:7px;border:1.5px solid var(--gray-200);cursor:pointer;" onclick="window._abrirAnexoCard('${item.id}',${i})">`).join("")}</div>` : ""}
       <div class="risk-actions-wrap">
         <div class="risk-status-wrap">
           <span class="risk-status-label">Status:</span>
@@ -897,10 +904,67 @@ function renderRiscos(){
   }).join("")}</div>`;
 }
 
+window._abrirAnexoCard = function(riscoId, idx){
+  const item = riscos[riscoId];
+  if(!item || !item.anexos) return;
+  const a = item.anexos[idx];
+  const w = window.open("","_blank");
+  w.document.write(`<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${a.base64}" style="max-width:100%;max-height:100vh;border-radius:4px;"></body></html>`);
+};
+
 window._updateRiscoStatus = function(id, novoStatus){
   db.ref(`gestaovista/riscos/${id}`).update({statusRisco: novoStatus, atualizadoEm: new Date().toISOString()});
   toast("Status do risco atualizado.");
 };
+
+// ---- Lógica de anexos (base64) ----
+let _anexosBase64 = []; // [{nome, base64}]
+
+function renderAnexosPreview(){
+  const cont = document.getElementById("r_anexos_preview");
+  cont.innerHTML = _anexosBase64.map((a,i) => `
+    <div style="position:relative;display:inline-block;">
+      <img src="${a.base64}" alt="${esc(a.nome)}" style="height:72px;width:72px;object-fit:cover;border-radius:8px;border:1.5px solid var(--gray-200);cursor:pointer;" onclick="window._verAnexo(${i})" title="${esc(a.nome)}">
+      <button onclick="window._removeAnexo(${i})" style="position:absolute;top:-6px;right:-6px;background:#e74c3c;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:18px;text-align:center;padding:0;">✕</button>
+    </div>
+  `).join("");
+}
+
+window._verAnexo = function(i){
+  const a = _anexosBase64[i];
+  const w = window.open("","_blank");
+  w.document.write(`<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${a.base64}" style="max-width:100%;max-height:100vh;border-radius:4px;"></body></html>`);
+};
+
+window._removeAnexo = function(i){
+  _anexosBase64.splice(i,1);
+  renderAnexosPreview();
+};
+
+document.getElementById("btnAnexoAdd").addEventListener("click", () => {
+  document.getElementById("r_anexos").value = "";
+  document.getElementById("r_anexos").click();
+});
+
+document.getElementById("r_anexos").addEventListener("change", async e => {
+  const files = [...e.target.files];
+  for(const f of files){
+    if(_anexosBase64.length >= 3){ toast("Máximo de 3 imagens por risco."); break; }
+    if(f.size > 512000){ toast(`"${f.name}" é maior que 500kb — ignorada.`); continue; }
+    const base64 = await new Promise(res => {
+      const r = new FileReader();
+      r.onload = ev => res(ev.target.result);
+      r.readAsDataURL(f);
+    });
+    _anexosBase64.push({ nome: f.name, base64 });
+  }
+  renderAnexosPreview();
+});
+
+function limparAnexos(){
+  _anexosBase64 = [];
+  renderAnexosPreview();
+}
 
 window._editRisco = function(id){
   const item = riscos[id];
@@ -915,6 +979,8 @@ window._editRisco = function(id){
   document.getElementById("r_tratativa").value = item.tratativa || "";
   document.getElementById("r_data").value = item.dataIdentificacao || "";
   document.getElementById("r_status").value = item.statusRisco || "aberto";
+  _anexosBase64 = item.anexos ? JSON.parse(JSON.stringify(item.anexos)) : [];
+  renderAnexosPreview();
   document.getElementById("modalRisco").classList.add("show");
 };
 
@@ -932,10 +998,14 @@ document.getElementById("btnNovoRisco").addEventListener("click", () => {
   document.getElementById("r_nivel").value = "alto";
   document.getElementById("r_data").value = hoje();
   document.getElementById("r_status").value = "aberto";
+  limparAnexos();
   document.getElementById("modalRisco").classList.add("show");
 });
 
-document.getElementById("btnRiscoCancel").addEventListener("click", () => document.getElementById("modalRisco").classList.remove("show"));
+document.getElementById("btnRiscoCancel").addEventListener("click", () => {
+  document.getElementById("modalRisco").classList.remove("show");
+  limparAnexos();
+});
 
 document.getElementById("btnRiscoSave").addEventListener("click", () => {
   const titulo = document.getElementById("r_titulo").value.trim();
@@ -951,6 +1021,7 @@ document.getElementById("btnRiscoSave").addEventListener("click", () => {
     tratativa: document.getElementById("r_tratativa").value.trim(),
     dataIdentificacao: document.getElementById("r_data").value,
     statusRisco: document.getElementById("r_status").value,
+    anexos: _anexosBase64.length ? _anexosBase64 : null,
     atualizadoEm: new Date().toISOString(),
   };
   if(editRiscoId){
