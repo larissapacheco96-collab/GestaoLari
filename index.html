@@ -911,7 +911,7 @@ function renderRiscos(){
           </select>
         </div>
         <div style="display:flex;gap:6px;">
-          <button class="btn btn-secondary btn-sm" onclick="window._editRisco('${item.id}')">✏️ Editar</button>
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();window._editRisco('${item.id}')">✏️ Editar</button>
           <button class="btn btn-danger btn-sm" onclick="window._delRisco('${item.id}')">🗑️ Excluir</button>
         </div>
       </div>
@@ -1083,8 +1083,12 @@ document.getElementById("btnRiscoSave").addEventListener("click", () => {
 // FECHAR MODAIS AO CLICAR FORA
 // ================================================================
 ["modalAlinh","modalDiary","modalRisco"].forEach(id => {
+  let _mousedownInModal = false;
+  document.getElementById(id).addEventListener("mousedown", e => {
+    _mousedownInModal = !!e.target.closest(".modal");
+  });
   document.getElementById(id).addEventListener("click", e => {
-    if(!e.target.closest(".modal")) document.getElementById(id).classList.remove("show");
+    if(!_mousedownInModal && !e.target.closest(".modal")) document.getElementById(id).classList.remove("show");
   });
 });
 
