@@ -1084,7 +1084,7 @@ document.getElementById("btnRiscoSave").addEventListener("click", () => {
 // ================================================================
 ["modalAlinh","modalDiary","modalRisco"].forEach(id => {
   document.getElementById(id).addEventListener("click", e => {
-    if(e.target.id === id) document.getElementById(id).classList.remove("show");
+    if(!e.target.closest(".modal")) document.getElementById(id).classList.remove("show");
   });
 });
 
