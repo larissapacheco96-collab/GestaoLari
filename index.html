@@ -295,7 +295,8 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
       <select class="filtro-select" id="filtroRiscoTipo">
         <option value="">Todos os tipos</option>
         <option value="cliente">Cliente</option>
-        <option value="interno">Interno</option>
+        <option value="interno">Interno OBDC</option>
+        <option value="ambos">Interno OBDC e Cliente</option>
         <option value="fiscal">Fiscal / Tributário</option>
         <option value="operacional">Operacional</option>
       </select>
@@ -390,7 +391,8 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
       <div class="field"><label>Tipo</label>
         <select id="r_tipo">
           <option value="cliente">Cliente</option>
-          <option value="interno">Interno</option>
+          <option value="interno">Interno OBDC</option>
+          <option value="ambos">Interno OBDC e Cliente</option>
           <option value="fiscal">Fiscal / Tributário</option>
           <option value="operacional">Operacional</option>
         </select>
@@ -405,16 +407,7 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
     </div>
     <div class="field"><label>Descrição do risco *</label><textarea id="r_desc" placeholder="Detalhe o risco assumido, contexto e possíveis consequências..." style="min-height:110px;"></textarea></div>
     <div class="field"><label>Ações / Tratativa prevista</label><textarea id="r_tratativa" placeholder="O que já foi feito ou está planejado para mitigar esse risco?"></textarea></div>
-    <div class="row2">
-      <div class="field"><label>Período</label><input type="text" id="r_periodo" placeholder="Ex: Out/2026 ou 01/2026 a 10/2026"></div>
-      <div class="field"><label>Erro</label>
-        <select id="r_erro">
-          <option value="">— Sem erro identificado —</option>
-          <option value="interno">Erro interno</option>
-          <option value="cliente">Erro do cliente</option>
-        </select>
-      </div>
-    </div>
+    <div class="field"><label>Período</label><input type="text" id="r_periodo" placeholder="Ex: Out/2026 ou 2024 a 2026"></div>
     <div class="row2">
       <div class="field"><label>Data de identificação</label><input type="date" id="r_data"></div>
       <div class="field"><label>Status</label>
@@ -880,7 +873,7 @@ function renderRiscos(){
   }
 
   const nivelLabel = {alto:"Alto",medio:"Médio",baixo:"Baixo"};
-  const tipoLabel = {cliente:"Cliente",interno:"Interno",fiscal:"Fiscal / Tributário",operacional:"Operacional"};
+  const tipoLabel = {cliente:"Cliente",interno:"Interno OBDC",ambos:"Interno OBDC e Cliente",fiscal:"Fiscal / Tributário",operacional:"Operacional"};
   const statusLabel = {aberto:"Aberto",monitorando:"Monitorando",mitigado:"Mitigado",encerrado:"Encerrado"};
   const statusColors = {aberto:["#ffe4e4","#b91c1c"],monitorando:["var(--orange-light)","#93610a"],mitigado:["var(--teal-light)","var(--teal-dark)"],encerrado:["var(--gray-100)","var(--gray-600)"]};
 
@@ -891,7 +884,7 @@ function renderRiscos(){
         <div>
           <div class="risk-title">${esc(item.titulo)}</div>
           ${item.cliente ? `<div style="font-size:12px;font-weight:600;color:var(--teal-dark);margin-bottom:2px;">🏢 ${esc(item.cliente)}</div>` : ""}
-          <div class="risk-meta">${fmtDate(item.dataIdentificacao||item.criadoEm?.split("T")[0])}${item.periodo ? ` · 📅 ${esc(item.periodo)}` : ""} · <span class="risk-tipo">${esc(tipoLabel[item.tipo]||item.tipo||"")}</span>${item.erro ? ` <span style="background:${item.erro==='interno'?'#ffe4e4':'#fff3cd'};color:${item.erro==='interno'?'#b91c1c':'#856404'};padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px;">⚠️ Erro ${item.erro==='interno'?'interno':'do cliente'}</span>` : ""}</div>
+          <div class="risk-meta">${fmtDate(item.dataIdentificacao||item.criadoEm?.split("T")[0])}${item.periodo ? ` · 📅 ${esc(item.periodo)}` : ""} · <span class="risk-tipo">${esc(tipoLabel[item.tipo]||item.tipo||"")}</span></div>
         </div>
         <span class="risk-nivel ${item.nivel||"medio"}">${esc(nivelLabel[item.nivel]||item.nivel)}</span>
       </div>
@@ -1018,7 +1011,6 @@ window._editRisco = function(id){
   document.getElementById("r_desc").value = item.descricao || "";
   document.getElementById("r_tratativa").value = item.tratativa || "";
   document.getElementById("r_periodo").value = item.periodo || "";
-  document.getElementById("r_erro").value = item.erro || "";
   document.getElementById("r_data").value = item.dataIdentificacao || "";
   document.getElementById("r_status").value = item.statusRisco || "aberto";
   _anexosBase64 = item.anexos ? JSON.parse(JSON.stringify(item.anexos)) : [];
@@ -1038,7 +1030,6 @@ document.getElementById("btnNovoRisco").addEventListener("click", () => {
   ["r_titulo","r_cliente","r_desc","r_tratativa","r_periodo"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("r_tipo").value = "cliente";
   document.getElementById("r_nivel").value = "alto";
-  document.getElementById("r_erro").value = "";
   document.getElementById("r_data").value = hoje();
   document.getElementById("r_status").value = "aberto";
   limparAnexos();
@@ -1063,7 +1054,6 @@ document.getElementById("btnRiscoSave").addEventListener("click", () => {
     descricao: desc,
     tratativa: document.getElementById("r_tratativa").value.trim(),
     periodo: document.getElementById("r_periodo").value.trim(),
-    erro: document.getElementById("r_erro").value,
     dataIdentificacao: document.getElementById("r_data").value,
     statusRisco: document.getElementById("r_status").value,
     anexos: _anexosBase64.length ? _anexosBase64 : null,
