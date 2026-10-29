@@ -307,6 +307,9 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
         <option value="mitigado">Mitigado</option>
         <option value="encerrado">Encerrado</option>
       </select>
+      <input type="date" class="filtro-select" id="filtroRiscoDe" title="De" onchange="renderRiscos()" style="cursor:pointer;">
+      <input type="date" class="filtro-select" id="filtroRiscoAte" title="Até" onchange="renderRiscos()" style="cursor:pointer;">
+      <button onclick="document.getElementById('filtroRiscoDe').value='';document.getElementById('filtroRiscoAte').value='';renderRiscos();" title="Limpar datas" style="background:none;border:1px solid var(--gray-200);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--gray-500);">✕ datas</button>
     </div>
     <div id="riscosLista"><div class="loading"><div class="spinner"></div><br>Carregando...</div></div>
   </div>
@@ -381,7 +384,7 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
 
 <!-- MODAL RISCO -->
 <div class="modal-overlay" id="modalRisco">
-  <div class="modal">
+  <div class="modal" onclick="event.stopPropagation()">
     <h3 id="modalRiscoTitle">Novo risco</h3>
     <div class="row2">
       <div class="field"><label>Título / Descrição curta *</label><input type="text" id="r_titulo" placeholder="Ex: SPED divergente, multa potencial"></div>
@@ -838,6 +841,8 @@ document.getElementById("filtroRiscoCliente").addEventListener("change", renderR
 document.getElementById("filtroRiscoNivel").addEventListener("change", renderRiscos);
 document.getElementById("filtroRiscoTipo").addEventListener("change", renderRiscos);
 document.getElementById("filtroRiscoStatus").addEventListener("change", renderRiscos);
+document.getElementById("filtroRiscoDe").addEventListener("change", renderRiscos);
+document.getElementById("filtroRiscoAte").addEventListener("change", renderRiscos);
 
 function updateFiltroClientes(){
   const sel = document.getElementById("filtroRiscoCliente");
@@ -856,12 +861,16 @@ function renderRiscos(){
   const fNivel = document.getElementById("filtroRiscoNivel").value;
   const fTipo = document.getElementById("filtroRiscoTipo").value;
   const fStatus = document.getElementById("filtroRiscoStatus").value;
+  const fDe  = document.getElementById("filtroRiscoDe")?.value  || "";
+  const fAte = document.getElementById("filtroRiscoAte")?.value || "";
 
   let items = Object.entries(riscos).map(([id,v])=>({id,...v}));
   if(fCliente) items = items.filter(i => (i.cliente||"").trim() === fCliente);
   if(fNivel) items = items.filter(i => i.nivel === fNivel);
   if(fTipo) items = items.filter(i => i.tipo === fTipo);
   if(fStatus) items = items.filter(i => i.statusRisco === fStatus);
+  if(fDe)  items = items.filter(i => (i.dataIdentificacao||i.criadoEm?.split("T")[0]||"") >= fDe);
+  if(fAte) items = items.filter(i => (i.dataIdentificacao||i.criadoEm?.split("T")[0]||"") <= fAte);
   items.sort((a,b) => {
     const ord = {alto:0,medio:1,baixo:2};
     return (ord[a.nivel]??9) - (ord[b.nivel]??9) || (b.criadoEm||"").localeCompare(a.criadoEm||"");
