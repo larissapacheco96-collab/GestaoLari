@@ -974,52 +974,79 @@ function renderRiscos(){
 
   cont.innerHTML = `<div class="risk-list">${items.map(item => {
     const sc = statusColors[item.statusRisco||"aberto"] || statusColors.aberto;
-    return `<div class="risk-card">
-      <div class="risk-head">
-        <div>
-          <div class="risk-title">${esc(item.titulo)}</div>
-          ${item.cliente ? `<div style="font-size:12px;font-weight:600;color:var(--teal-dark);margin-bottom:2px;">🏢 ${esc(item.cliente)}</div>` : ""}
-          <div class="risk-meta">${fmtDate(item.dataIdentificacao||item.criadoEm?.split("T")[0])}${item.periodo ? ` · 📅 ${esc(item.periodo)}` : ""} · <span class="risk-tipo">${esc(tipoLabel[item.tipo]||item.tipo||"")}</span></div>
-        </div>
-        <span class="risk-nivel ${item.nivel||"medio"}">${esc(nivelLabel[item.nivel]||item.nivel)}</span>
-      </div>
-      <div class="risk-desc">${esc(item.descricao||"").replace(/\n/g,"<br>")}</div>
-      ${item.tratativa ? `<div style="font-size:12.5px;color:var(--gray-600);background:var(--gray-50);border-radius:7px;padding:10px 12px;margin-bottom:12px;border-left:3px solid var(--gray-200);"><strong>Tratativa:</strong> ${esc(item.tratativa).replace(/\n/g,"<br>")}</div>` : ""}
-      ${(item.valPrincipal || item.valMulta || item.valJuros) ? (()=>{
-        const p = parseFloat((item.valPrincipal||"").replace(/\./g,"").replace(",",".")) || 0;
-        const m = parseFloat((item.valMulta||"").replace(/\./g,"").replace(",",".")) || 0;
-        const j = parseFloat((item.valJuros||"").replace(/\./g,"").replace(",",".")) || 0;
-        const total = p + m + j;
-        const fmt = v => "R$ " + v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-        return `<div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:7px;padding:10px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;">
+    const temValor = !!(item.valPrincipal || item.valMulta || item.valJuros);
+    const temAnexo = !!(item.anexos && item.anexos.length);
+    // badges compactos na linha resumo
+    const badges = [
+      `<span class="risk-nivel ${item.nivel||"medio"}" style="font-size:10px;padding:2px 7px;">${esc(nivelLabel[item.nivel]||item.nivel)}</span>`,
+      `<span style="font-size:11px;background:${sc[0]};color:${sc[1]};border-radius:20px;padding:2px 8px;font-weight:600;">${esc(statusLabel[item.statusRisco||"aberto"])}</span>`,
+      temValor ? `<span style="font-size:11px;background:var(--teal-light);color:var(--teal-dark);border-radius:20px;padding:2px 8px;font-weight:600;">💰</span>` : "",
+      temAnexo ? `<span style="font-size:11px;background:var(--gray-100);color:var(--gray-600);border-radius:20px;padding:2px 8px;">📎 ${item.anexos.length}</span>` : "",
+    ].filter(Boolean).join("");
+
+    // conteúdo expandido
+    const p = parseMoeda(item.valPrincipal||"");
+    const m = parseMoeda(item.valMulta||"");
+    const j = parseMoeda(item.valJuros||"");
+    const fmt = v => "R$ " + v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+    const valorBlock = temValor ? `<div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:7px;padding:10px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;">
           <span style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;flex-basis:100%;">💰 Valores</span>
           ${p ? `<span style="font-size:12px;color:var(--gray-600);">Principal: <strong style="font-family:'IBM Plex Mono',monospace;">${fmt(p)}</strong></span>` : ""}
           ${m ? `<span style="font-size:12px;color:var(--gray-600);">Multa: <strong style="font-family:'IBM Plex Mono',monospace;">${fmt(m)}</strong></span>` : ""}
           ${j ? `<span style="font-size:12px;color:var(--gray-600);">Juros: <strong style="font-family:'IBM Plex Mono',monospace;">${fmt(j)}</strong></span>` : ""}
-          <span style="margin-left:auto;font-size:13px;font-weight:700;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;">Total: ${fmt(total)}</span>
-        </div>`;
-      })() : ""}
-      ${item.anexos && item.anexos.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${item.anexos.map((a,i) => {
+          <span style="margin-left:auto;font-size:13px;font-weight:700;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;">Total: ${fmt(p+m+j)}</span>
+        </div>` : "";
+    const anexosBlock = temAnexo ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${item.anexos.map((a,i) => {
         const icone = a.tipo === "pdf" ? "📄" : a.tipo === "email" ? "📧" : null;
         return icone
           ? `<div onclick="window._abrirAnexoCard('${item.id}',${i})" title="${esc(a.nome)}" style="height:64px;width:64px;border-radius:7px;border:1.5px solid var(--gray-200);background:var(--gray-50);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:3px;"><span style="font-size:20px;">${icone}</span><span style="font-size:10px;color:var(--gray-500);text-align:center;padding:0 3px;overflow:hidden;white-space:nowrap;max-width:60px;text-overflow:ellipsis;">${esc(a.nome)}</span></div>`
           : `<img src="${a.base64}" alt="${esc(a.nome)}" title="${esc(a.nome)}" style="height:64px;width:64px;object-fit:cover;border-radius:7px;border:1.5px solid var(--gray-200);cursor:pointer;" onclick="window._abrirAnexoCard('${item.id}',${i})">`;
-      }).join("")}</div>` : ""}
-      <div class="risk-actions-wrap">
-        <div class="risk-status-wrap">
-          <span class="risk-status-label">Status:</span>
-          <select class="risk-status-select" style="background:${sc[0]};color:${sc[1]};" onchange="window._updateRiscoStatus('${item.id}', this.value)">
-            ${["aberto","monitorando","mitigado","encerrado"].map(s=>`<option value="${s}"${item.statusRisco===s?" selected":""}>${statusLabel[s]}</option>`).join("")}
-          </select>
+      }).join("")}</div>` : "";
+
+    return `<div class="risk-card" style="padding:0;overflow:hidden;">
+      <!-- LINHA RESUMO (sempre visível) -->
+      <div class="risk-row-summary" onclick="window._toggleRisco('${item.id}')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none;">
+        <span id="arrow-${item.id}" style="font-size:13px;color:var(--gray-400);transition:transform .2s;display:inline-block;">▶</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13.5px;font-weight:700;color:var(--gray-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.titulo)}</div>
+          ${item.cliente ? `<div style="font-size:11.5px;color:var(--teal-dark);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🏢 ${esc(item.cliente)}</div>` : ""}
         </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();window._editRisco('${item.id}')">✏️ Editar</button>
-          <button class="btn btn-danger btn-sm" onclick="window._delRisco('${item.id}')">🗑️ Excluir</button>
+        <div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">${badges}</div>
+      </div>
+      <!-- DETALHES (oculto por padrão) -->
+      <div id="detail-${item.id}" style="display:none;padding:0 14px 14px;border-top:1px solid var(--gray-100);">
+        <div style="padding-top:12px;">
+          <div class="risk-meta" style="margin-bottom:8px;">${fmtDate(item.dataIdentificacao||item.criadoEm?.split("T")[0])}${item.periodo ? ` · 📅 ${esc(item.periodo)}` : ""} · <span class="risk-tipo">${esc(tipoLabel[item.tipo]||item.tipo||"")}</span></div>
+          <div class="risk-desc">${esc(item.descricao||"").replace(/\n/g,"<br>")}</div>
+          ${item.tratativa ? `<div style="font-size:12.5px;color:var(--gray-600);background:var(--gray-50);border-radius:7px;padding:10px 12px;margin-bottom:12px;border-left:3px solid var(--gray-200);"><strong>Tratativa:</strong> ${esc(item.tratativa).replace(/\n/g,"<br>")}</div>` : ""}
+          ${valorBlock}
+          ${anexosBlock}
+          <div class="risk-actions-wrap" style="margin-top:4px;">
+            <div class="risk-status-wrap">
+              <span class="risk-status-label">Status:</span>
+              <select class="risk-status-select" style="background:${sc[0]};color:${sc[1]};" onchange="event.stopPropagation();window._updateRiscoStatus('${item.id}', this.value)">
+                ${["aberto","monitorando","mitigado","encerrado"].map(s=>`<option value="${s}"${item.statusRisco===s?" selected":""}>${statusLabel[s]}</option>`).join("")}
+              </select>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();window._editRisco('${item.id}')">✏️ Editar</button>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();window._delRisco('${item.id}')">🗑️ Excluir</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>`;
   }).join("")}</div>`;
 }
+
+window._toggleRisco = function(id){
+  const detail = document.getElementById("detail-"+id);
+  const arrow  = document.getElementById("arrow-"+id);
+  if(!detail) return;
+  const aberto = detail.style.display !== "none";
+  detail.style.display = aberto ? "none" : "block";
+  arrow.style.transform = aberto ? "" : "rotate(90deg)";
+};
 
 window._abrirAnexoCard = function(riscoId, idx){
   const item = riscos[riscoId];
