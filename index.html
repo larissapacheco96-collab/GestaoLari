@@ -422,6 +422,35 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
         </select>
       </div>
     </div>
+    <!-- VALORES DO RISCO -->
+    <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:14px 16px;margin-bottom:4px;">
+      <div style="font-size:12px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">💰 Valores do risco (opcional)</div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:0">
+          <label>Valor principal (R$)</label>
+          <input type="text" id="r_val_principal" placeholder="0,00" oninput="calcTotalRisco()" style="font-family:'IBM Plex Mono',monospace;">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Multa (R$)</label>
+          <input type="text" id="r_val_multa" placeholder="0,00" oninput="calcTotalRisco()" style="font-family:'IBM Plex Mono',monospace;">
+        </div>
+      </div>
+      <div class="row2" style="margin-top:8px;align-items:flex-end;">
+        <div class="field" style="margin-bottom:0">
+          <label>Juros / Acréscimos (R$)</label>
+          <input type="text" id="r_val_juros" placeholder="0,00" oninput="calcTotalRisco()" style="font-family:'IBM Plex Mono',monospace;">
+        </div>
+        <div style="flex:1;background:#fff;border:1.5px solid var(--teal);border-radius:var(--radius);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:12px;font-weight:700;color:var(--teal-dark);">TOTAL ESTIMADO</span>
+          <span id="r_val_total" style="font-size:15px;font-weight:700;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;">R$ 0,00</span>
+        </div>
+      </div>
+    </div>
+    <!-- E-MAIL RELACIONADO -->
+    <div class="field">
+      <label>📧 E-mail relacionado (cole o conteúdo)</label>
+      <textarea id="r_email" placeholder="Cole aqui o conteúdo do e-mail relacionado ao risco..." style="min-height:80px;font-size:12.5px;"></textarea>
+    </div>
     <div class="field">
       <label>Anexos (máx. 3 arquivos · imagem ou PDF · até 1MB cada · ou Cole Ctrl+V)</label>
       <input type="file" id="r_anexos" accept="image/*,.pdf,application/pdf" multiple style="display:none;">
@@ -899,6 +928,21 @@ function renderRiscos(){
       </div>
       <div class="risk-desc">${esc(item.descricao||"").replace(/\n/g,"<br>")}</div>
       ${item.tratativa ? `<div style="font-size:12.5px;color:var(--gray-600);background:var(--gray-50);border-radius:7px;padding:10px 12px;margin-bottom:12px;border-left:3px solid var(--gray-200);"><strong>Tratativa:</strong> ${esc(item.tratativa).replace(/\n/g,"<br>")}</div>` : ""}
+      ${(item.valPrincipal || item.valMulta || item.valJuros) ? (()=>{
+        const p = parseFloat((item.valPrincipal||"").replace(/\./g,"").replace(",",".")) || 0;
+        const m = parseFloat((item.valMulta||"").replace(/\./g,"").replace(",",".")) || 0;
+        const j = parseFloat((item.valJuros||"").replace(/\./g,"").replace(",",".")) || 0;
+        const total = p + m + j;
+        const fmt = v => "R$ " + v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+        return `<div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:7px;padding:10px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;">
+          <span style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;flex-basis:100%;">💰 Valores</span>
+          ${p ? `<span style="font-size:12px;color:var(--gray-600);">Principal: <strong style="font-family:'IBM Plex Mono',monospace;">${fmt(p)}</strong></span>` : ""}
+          ${m ? `<span style="font-size:12px;color:var(--gray-600);">Multa: <strong style="font-family:'IBM Plex Mono',monospace;">${fmt(m)}</strong></span>` : ""}
+          ${j ? `<span style="font-size:12px;color:var(--gray-600);">Juros: <strong style="font-family:'IBM Plex Mono',monospace;">${fmt(j)}</strong></span>` : ""}
+          <span style="margin-left:auto;font-size:13px;font-weight:700;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;">Total: ${fmt(total)}</span>
+        </div>`;
+      })() : ""}
+      ${item.emailRelacionado ? `<div style="font-size:11.5px;color:var(--gray-500);background:var(--gray-50);border:1px solid var(--gray-200);border-radius:7px;padding:8px 12px;margin-bottom:12px;cursor:pointer;overflow:hidden;max-height:48px;white-space:nowrap;text-overflow:ellipsis;" title="Clique para expandir" onclick="this.style.maxHeight=this.style.maxHeight==='none'?'48px':'none';this.style.whiteSpace=this.style.whiteSpace==='normal'?'nowrap':'normal';">📧 ${esc(item.emailRelacionado)}</div>` : ""}
       ${item.anexos && item.anexos.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${item.anexos.map((a,i) => a.tipo === "pdf"
         ? `<div onclick="window._abrirAnexoCard('${item.id}',${i})" title="${esc(a.nome)}" style="height:64px;width:64px;border-radius:7px;border:1.5px solid var(--gray-200);background:var(--gray-50);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:3px;"><span style="font-size:20px;">📄</span><span style="font-size:10px;color:var(--gray-500);text-align:center;padding:0 3px;overflow:hidden;white-space:nowrap;max-width:60px;text-overflow:ellipsis;">${esc(a.nome)}</span></div>`
         : `<img src="${a.base64}" alt="${esc(a.nome)}" title="${esc(a.nome)}" style="height:64px;width:64px;object-fit:cover;border-radius:7px;border:1.5px solid var(--gray-200);cursor:pointer;" onclick="window._abrirAnexoCard('${item.id}',${i})">`
@@ -1008,6 +1052,15 @@ function limparAnexos(){
   renderAnexosPreview();
 }
 
+function parseMoeda(s){ return parseFloat((s||"").replace(/\./g,"").replace(",",".")) || 0; }
+function fmtMoeda(v){ return "R$ " + v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function calcTotalRisco(){
+  const p = parseMoeda(document.getElementById("r_val_principal").value);
+  const m = parseMoeda(document.getElementById("r_val_multa").value);
+  const j = parseMoeda(document.getElementById("r_val_juros").value);
+  document.getElementById("r_val_total").textContent = fmtMoeda(p + m + j);
+}
+
 window._editRisco = function(id){
   const item = riscos[id];
   if(!item) return;
@@ -1020,6 +1073,11 @@ window._editRisco = function(id){
   document.getElementById("r_desc").value = item.descricao || "";
   document.getElementById("r_tratativa").value = item.tratativa || "";
   document.getElementById("r_periodo").value = item.periodo || "";
+  document.getElementById("r_val_principal").value = item.valPrincipal || "";
+  document.getElementById("r_val_multa").value = item.valMulta || "";
+  document.getElementById("r_val_juros").value = item.valJuros || "";
+  document.getElementById("r_email").value = item.emailRelacionado || "";
+  calcTotalRisco();
   document.getElementById("r_data").value = item.dataIdentificacao || "";
   document.getElementById("r_status").value = item.statusRisco || "aberto";
   _anexosBase64 = item.anexos ? JSON.parse(JSON.stringify(item.anexos)) : [];
@@ -1036,11 +1094,12 @@ window._delRisco = function(id){
 document.getElementById("btnNovoRisco").addEventListener("click", () => {
   editRiscoId = null;
   document.getElementById("modalRiscoTitle").textContent = "Novo risco";
-  ["r_titulo","r_cliente","r_desc","r_tratativa","r_periodo"].forEach(id => document.getElementById(id).value = "");
+  ["r_titulo","r_cliente","r_desc","r_tratativa","r_periodo","r_val_principal","r_val_multa","r_val_juros","r_email"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("r_tipo").value = "cliente";
   document.getElementById("r_nivel").value = "alto";
   document.getElementById("r_data").value = hoje();
   document.getElementById("r_status").value = "aberto";
+  calcTotalRisco();
   limparAnexos();
   document.getElementById("modalRisco").classList.add("show");
 });
@@ -1063,6 +1122,10 @@ document.getElementById("btnRiscoSave").addEventListener("click", () => {
     descricao: desc,
     tratativa: document.getElementById("r_tratativa").value.trim(),
     periodo: document.getElementById("r_periodo").value.trim(),
+    valPrincipal: document.getElementById("r_val_principal").value.trim(),
+    valMulta: document.getElementById("r_val_multa").value.trim(),
+    valJuros: document.getElementById("r_val_juros").value.trim(),
+    emailRelacionado: document.getElementById("r_email").value.trim(),
     dataIdentificacao: document.getElementById("r_data").value,
     statusRisco: document.getElementById("r_status").value,
     anexos: _anexosBase64.length ? _anexosBase64 : null,
