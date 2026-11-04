@@ -701,15 +701,18 @@ document.getElementById("btnAlinhSave").addEventListener("click", () => {
   };
 
   if(editAlinhId){
-    // Preserva o que já estava salvo: só sobrescreve campos que o usuário preencheu,
-    // mantém os demais com o valor original do Firebase.
-    const original = alinhamentos[editAlinhId] || {};
-    const payload = { ...original, ...campos };
-    // Campos opcionais: se o form foi limpo, mantém o original
-    ["descricao","itens","prazo","responsavel"].forEach(k => {
-      if(!campos[k] && original[k]) payload[k] = original[k];
+    // Busca o estado atual do Firebase antes de salvar para garantir que
+    // campos não alterados (itens, descrição, prazo, responsável) sejam preservados.
+    const ref = db.ref(`gestaovista/alinhamentos/${editAlinhId}`);
+    ref.once("value", snap => {
+      const original = snap.val() || {};
+      const payload = { ...original, ...campos };
+      // Campos opcionais: se o form ficou vazio, mantém o que estava salvo
+      ["descricao","itens","prazo","responsavel"].forEach(k => {
+        if(!campos[k] && original[k]) payload[k] = original[k];
+      });
+      ref.set(payload);
     });
-    db.ref(`gestaovista/alinhamentos/${editAlinhId}`).set(payload);
     toast("Alinhamento atualizado!");
   } else {
     campos.criadoEm = new Date().toISOString();
