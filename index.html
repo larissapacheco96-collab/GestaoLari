@@ -100,6 +100,8 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
 .align-items-list li:last-child{border-bottom:none;}
 .item-check{width:16px;height:16px;border-radius:4px;border:2px solid var(--gray-300);flex-shrink:0;margin-top:1px;cursor:pointer;accent-color:var(--teal);}
 .item-check:checked + span{text-decoration:line-through;color:var(--gray-400);}
+.align-items-list li.item-done span{text-decoration:line-through;color:var(--gray-400);}
+.align-items-list li.item-done{opacity:.7;}
 .align-card-actions{display:flex;gap:8px;}
 .prazo-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--gray-600);background:var(--gray-100);padding:3px 8px;border-radius:6px;margin-bottom:12px;}
 .prazo-tag.atrasado{background:var(--red-light);color:var(--red);}
@@ -644,7 +646,13 @@ function renderAlinhamentos(){
       </div>
       ${item.prazo ? `<div class="prazo-tag${atrasado?" atrasado":""}">📅 Prazo: ${fmtDate(item.prazo)}${item.responsavel?` · ${esc(item.responsavel)}`:""}</div>` : (item.responsavel ? `<div class="prazo-tag">👤 ${esc(item.responsavel)}</div>` : "")}
       ${item.descricao ? `<div class="align-desc">${esc(item.descricao)}</div>` : ""}
-      ${itensArr.length ? `<ul class="align-items-list">${itensArr.map(it => `<li><input type="checkbox" class="item-check"><span>${esc(it)}</span></li>`).join("")}</ul>` : ""}
+      ${itensArr.length ? `<ul class="align-items-list">${itensArr.map((it,idx) => {
+        const marcado = item.itensMarcados && item.itensMarcados[idx];
+        return `<li class="${marcado?"item-done":""}">
+          <input type="checkbox" class="item-check" ${marcado?"checked":""} onchange="window._toggleItemAlinh('${item.id}',${idx},this.checked,${itensArr.length})">
+          <span>${esc(it)}</span>
+        </li>`;
+      }).join("")}</ul>` : ""}
       <div class="align-card-actions">
         <button class="btn btn-secondary btn-sm" onclick="window._editAlinh('${item.id}')">✏️ Editar</button>
         <button class="btn btn-danger btn-sm" onclick="window._delAlinh('${item.id}')">🗑️ Excluir</button>
@@ -652,6 +660,24 @@ function renderAlinhamentos(){
     </div>`;
   }).join("")}</div>`;
 }
+
+window._toggleItemAlinh = function(id, idx, marcado, total){
+  const ref = db.ref(`gestaovista/alinhamentos/${id}`);
+  ref.once("value", snap => {
+    const item = snap.val() || {};
+    const itensMarcados = item.itensMarcados ? [...item.itensMarcados] : Array(total).fill(false);
+    // garante tamanho correto caso itens tenham sido adicionados
+    while(itensMarcados.length < total) itensMarcados.push(false);
+    itensMarcados[idx] = marcado;
+    const todosMarcados = itensMarcados.slice(0, total).every(Boolean);
+    const update = { itensMarcados, atualizadoEm: new Date().toISOString() };
+    if(todosMarcados && item.status !== "concluido"){
+      update.status = "concluido";
+      toast("✅ Todas as ações concluídas! Status atualizado para Concluído.");
+    }
+    ref.update(update);
+  });
+};
 
 window._editAlinh = function(id){
   const item = alinhamentos[id];
