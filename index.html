@@ -688,22 +688,32 @@ document.getElementById("btnAlinhCancel").addEventListener("click", () => docume
 document.getElementById("btnAlinhSave").addEventListener("click", () => {
   const titulo = document.getElementById("a_titulo").value.trim();
   if(!titulo){ alert("Informe um título."); return; }
-  const payload = {
+
+  const campos = {
     titulo,
     categoria: document.getElementById("a_categ").value,
-    status: document.getElementById("a_status").value,
+    status:    document.getElementById("a_status").value,
     descricao: document.getElementById("a_desc").value.trim(),
-    itens: document.getElementById("a_itens").value.trim(),
-    prazo: document.getElementById("a_prazo").value,
+    itens:     document.getElementById("a_itens").value.trim(),
+    prazo:     document.getElementById("a_prazo").value,
     responsavel: document.getElementById("a_resp").value.trim(),
     atualizadoEm: new Date().toISOString(),
   };
+
   if(editAlinhId){
-    db.ref(`gestaovista/alinhamentos/${editAlinhId}`).update(payload);
+    // Preserva o que já estava salvo: só sobrescreve campos que o usuário preencheu,
+    // mantém os demais com o valor original do Firebase.
+    const original = alinhamentos[editAlinhId] || {};
+    const payload = { ...original, ...campos };
+    // Campos opcionais: se o form foi limpo, mantém o original
+    ["descricao","itens","prazo","responsavel"].forEach(k => {
+      if(!campos[k] && original[k]) payload[k] = original[k];
+    });
+    db.ref(`gestaovista/alinhamentos/${editAlinhId}`).set(payload);
     toast("Alinhamento atualizado!");
   } else {
-    payload.criadoEm = new Date().toISOString();
-    db.ref("gestaovista/alinhamentos").push(payload);
+    campos.criadoEm = new Date().toISOString();
+    db.ref("gestaovista/alinhamentos").push(campos);
     toast("Alinhamento criado!");
   }
   document.getElementById("modalAlinh").classList.remove("show");
